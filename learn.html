@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russian Language Practice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+        }
+        .word-token {
+            position: relative;
+            cursor: pointer;
+            border-bottom: 2px dotted #a7a7a7;
+            margin: 0 2px;
+        }
+        .word-token .tooltip {
+            visibility: hidden;
+            width: 120px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .word-token:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        .feedback {
+            transition: all 0.3s ease-in-out;
+        }
+        .skill-node {
+            transition: transform 0.2s ease-in-out;
+        }
+        .skill-node:hover {
+            transform: scale(1.1);
+        }
+        /* Toggle Switch Styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4ade80;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4ade80;
+        }
+
+        /* In samp.html, inside the <style> tag */
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
+    <div id="app-container" class="w-full max-w-2xl mx-auto p-4 md:p-6 bg-white rounded-3xl shadow-2xl">
+        
+        <div id="skill-tree-screen">
+            <h1 class="text-3xl font-extrabold text-slate-800 mb-2 text-center">Russian Course</h1>
+            <p class="text-slate-500 mb-8 text-center">Select a skill to start learning!</p>
+            <div id="skill-tree-container" class="flex flex-col gap-4 overflow-y-auto" style="height: calc(100vh - 200px);">
+</div>
+        </div>
+
+        <div id="level-view-screen" class="hidden">
+            <div class="flex items-center mb-6">
+                <button id="back-to-skills-from-levels-btn" class="text-slate-500 hover:text-slate-700 p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 15l-3-3m0 0l3-3m-3 3h8a5 5 0 015 5v1" />
+                    </svg>
+                </button>
+                <h1 id="level-view-title" class="text-3xl font-extrabold text-slate-800 text-center flex-grow"></h1>
+            </div>
+            <div id="level-container" class="space-y-4">
+                </div>
+        </div>
+
+        <div id="start-screen" class="text-center hidden">
+            <h1 id="start-skill-title" class="text-3xl font-bold text-gray-800 mb-4"></h1>
+            <p class="text-gray-600 mb-8">Ready to start your lesson?</p>
+            <button id="start-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-2xl text-lg transition-transform transform hover:scale-105">
+                Start Lesson
+            </button>
+             <button id="back-to-skills-btn" class="w-full mt-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-4 rounded-2xl text-lg transition-transform transform hover:scale-105">
+                Back to Skills
+            </button>
+        </div>
+
+        <div id="main-app" class="hidden">
+            <div class="mb-6 flex items-center gap-4">
+                 <button id="quit-lesson-btn" class="text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                 </button>
+                <div class="w-full bg-slate-200 rounded-full h-4">
+                    <div id="progress-bar" class="bg-green-500 h-4 rounded-full transition-all duration-300 ease-in-out" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div id="challenge-container" class="mb-6 min-h-[200px] md:min-h-[250px]">
+                </div>
+
+            <div id="user-input-area">
+                </div>
+
+            <div id="feedback-container" class="mt-4"></div>
+        </div>
+    </div>
+
+   <script>
+        let lessonData = {}; 
+        const skillTreeData = {
+    "skills": [
+        [
+            {
+                "name": "Intro",
+                "shortName": "Intro",
+                "fileNameBase": "Intro"
+            }
+        ],
+        [
+            {
+                "name": "Jobs",
+                "shortName": "Jobs",
+                "fileNameBase": "Jobs"
+            }
+        ],
+        [
+            {
+                "name": "Restaurant",
+                "shortName": "Restaurant",
+                "fileNameBase": "Restaurant"
+            }
+        ],
+        [
+            {
+                "name": "Basics",
+                "shortName": "Basics",
+                "fileNameBase": "Basics"
+            },
+            {
+                "name": "Phrases",
+                "shortName": "Phrases",
+                "fileNameBase": "Phrases"
+            }
+        ],
+        [
+            {
+                "name": "Basics 2",
+                "shortName": "Basics 2",
+                "fileNameBase": "Basics_2"
+            }
+        ],
+        [
+            {
+                "name": "Plurals",
+                "shortName": "Plurals",
+                "fileNameBase": "Plurals"
+            },
+            {
+                "name": "Where",
+                "shortName": "Where",
+                "fileNameBase": "Where"
+            }
+        ],
+        [
+            {
+                "name": "Travel",
+                "shortName": "Travel",
+                "fileNameBase": "Travel"
+            },
+            {
+                "name": "Animals",
+                "shortName": "Animals",
+                "fileNameBase": "Animals"
+            }
+        ],
+        [
+            {
+                "name": "Phrases 2",
+                "shortName": "Phrases 2",
+                "fileNameBase": "Phrases_2"
+            },
+            {
+                "name": "Places",
+                "shortName": "Places",
+                "fileNameBase": "Places"
+            }
+        ],
+        [
+            {
+                "name": "Genitive",
+                "shortName": "Genitive",
+                "fileNameBase": "Genitive"
+            },
+            {
+                "name": "Whose",
+                "shortName": "Whose",
+                "fileNameBase": "Whose"
+            }
+        ],
+        [
+            {
+                "name": "Object",
+                "shortName": "Object",
+                "fileNameBase": "Object"
+            }
+        ],
+        [
+            {
+                "name": "1 to 4",
+                "shortName": "1 to 4",
+                "fileNameBase": "1_to_4"
+            },
+            {
+                "name": "Present",
+                "shortName": "Present",
+                "fileNameBase": "Present"
+            }
+        ],
+        [
+            {
+                "name": "Groceries",
+                "shortName": "Groceries",
+                "fileNameBase": "Groceries"
+            }
+        ],
+        [
+            {
+                "name": "Present 2",
+                "shortName": "Present 2",
+                "fileNameBase": "Present_2"
+            },
+            {
+                "name": "Liking",
+                "shortName": "Liking",
+                "fileNameBase": "Liking"
+            }
+        ],
+        [
+            {
+                "name": "Food",
+                "shortName": "Food",
+                "fileNameBase": "Food"
+            }
+        ],
+        [
+            {
+                "name": "Describe",
+                "shortName": "Describe",
+                "fileNameBase": "Describe"
+            },
+            {
+                "name": "Colors",
+                "shortName": "Colors",
+                "fileNameBase": "Colors"
+            }
+        ],
+        [
+            {
+                "name": "There is",
+                "shortName": "There is",
+                "fileNameBase": "There_is"
+            }
+        ],
+        [
+            {
+                "name": "Questions",
+                "shortName": "Questions",
+                "fileNameBase": "Questions"
+            },
+            {
+                "name": "People",
+                "shortName": "People",
+                "fileNameBase": "People"
+            },
+            {
+                "name": "Around",
+                "shortName": "Around",
+                "fileNameBase": "Around"
+            }
+        ],
+        [
+            {
+                "name": "Places 2",
+                "shortName": "Places 2",
+                "fileNameBase": "Places_2"
+            },
+            {
+                "name": "Present 3",
+                "shortName": "Present 3",
+                "fileNameBase": "Present_3"
+            }
+        ],
+        [
+            {
+                "name": "Past",
+                "shortName": "Past",
+                "fileNameBase": "Past"
+            }
+        ],
+        [
+            {
+                "name": "How Many",
+                "shortName": "How Many",
+                "fileNameBase": "How_Many"
+            },
+            {
+                "name": "Family",
+                "shortName": "Family",
+                "fileNameBase": "Family"
+            }
+        ],
+        [
+            {
+                "name": "People 2",
+                "shortName": "People 2",
+                "fileNameBase": "People_2"
+            },
+            {
+                "name": "Nature",
+                "shortName": "Nature",
+                "fileNameBase": "Nature"
+            },
+            {
+                "name": "Sport",
+                "shortName": "Sport",
+                "fileNameBase": "Sport"
+            }
+        ],
+        [
+            {
+                "name": "Dates&Time",
+                "shortName": "Dates&Time",
+                "fileNameBase": "Dates&Time"
+            }
+        ],
+        [
+            {
+                "name": "Adjectives",
+                "shortName": "Adjectives",
+                "fileNameBase": "Adjectives"
+            },
+            {
+                "name": "Past & Inf",
+                "shortName": "Past & Inf",
+                "fileNameBase": "Past_&_Inf"
+            },
+            {
+                "name": "Shopping",
+                "shortName": "Shopping",
+                "fileNameBase": "Shopping"
+            }
+        ],
+        [
+            {
+                "name": "Dative and Plurals",
+                "shortName": "Dative and Plurals",
+                "fileNameBase": "Dative_and_Plurals"
+            },
+            {
+                "name": "Speaking 1",
+                "shortName": "Speaking 1",
+                "fileNameBase": "Speaking_1"
+            },
+            {
+                "name": "Room",
+                "shortName": "Room",
+                "fileNameBase": "Room"
+            }
+        ],
+        [
+            {
+                "name": "Perfective Verbs -1",
+                "shortName": "Perfective Verbs -1",
+                "fileNameBase": "Perfective_Verbs__1"
+            },
+            {
+                "name": "Instrumental Case",
+                "shortName": "Instrumental Case",
+                "fileNameBase": "Instrumental_Case"
+            },
+            {
+                "name": "Body",
+                "shortName": "Body",
+                "fileNameBase": "Body"
+            }
+        ],
+        [
+            {
+                "name": "Genitive Plural",
+                "shortName": "Genitive Plural",
+                "fileNameBase": "Genitive_Plural"
+            },
+            {
+                "name": "Adjectives 2",
+                "shortName": "Adjectives 2",
+                "fileNameBase": "Adjectives_2"
+            }
+        ],
+        [
+            {
+                "name": "Animals-2",
+                "shortName": "Animals-2",
+                "fileNameBase": "Animals_2"
+            },
+            {
+                "name": "2+3=5",
+                "shortName": "2+3=5",
+                "fileNameBase": "2+3=5"
+            },
+            {
+                "name": "Language",
+                "shortName": "Language",
+                "fileNameBase": "Language"
+            }
+        ],
+        [
+            {
+                "name": "Short&Long",
+                "shortName": "Short&Long",
+                "fileNameBase": "Short&Long"
+            },
+            {
+                "name": "Education",
+                "shortName": "Education",
+                "fileNameBase": "Education"
+            },
+            {
+                "name": "Countries and Places",
+                "shortName": "Countries and Places",
+                "fileNameBase": "Countries_and_Places"
+            }
+        ],
+        [
+            {
+                "name": "House",
+                "shortName": "House",
+                "fileNameBase": "House"
+            },
+            {
+                "name": "Reflexive",
+                "shortName": "Reflexive",
+                "fileNameBase": "Reflexive"
+            }
+        ],
+        [
+            {
+                "name": "Time expressions 2",
+                "shortName": "Time expressions 2",
+                "fileNameBase": "Time_expressions_2"
+            },
+            {
+                "name": "Imperative",
+                "shortName": "Imperative",
+                "fileNameBase": "Imperative"
+            }
+        ],
+        [
+            {
+                "name": "Verbs of Motion",
+                "shortName": "Verbs of Motion",
+                "fileNameBase": "Verbs_of_Motion"
+            },
+            {
+                "name": "City and People",
+                "shortName": "City and People",
+                "fileNameBase": "City_and_People"
+            }
+        ],
+        [
+            {
+                "name": "Imperative 2",
+                "shortName": "Imperative 2",
+                "fileNameBase": "Imperative_2"
+            },
+            {
+                "name": "Something",
+                "shortName": "Something",
+                "fileNameBase": "Something"
+            },
+            {
+                "name": "Technology and Home",
+                "shortName": "Technology and Home",
+                "fileNameBase": "Technology_and_Home"
+            }
+        ],
+        [
+            {
+                "name": "Future & Past with Perfectives",
+                "shortName": "Future & Past with Perfectives",
+                "fileNameBase": "Future_&_Past_with_Perfectives"
+            },
+            {
+                "name": "Being Instrumental",
+                "shortName": "Being Instrumental",
+                "fileNameBase": "Being_Instrumental"
+            },
+            {
+                "name": "Placing Objects",
+                "shortName": "Placing Objects",
+                "fileNameBase": "Placing_Objects"
+            }
+        ],
+        [
+            {
+                "name": "Kitchen and Food",
+                "shortName": "Kitchen and Food",
+                "fileNameBase": "Kitchen_and_Food"
+            },
+            {
+                "name": "Speaking2",
+                "shortName": "Speaking2",
+                "fileNameBase": "Speaking2"
+            },
+            {
+                "name": "Subjunctive and Conditional",
+                "shortName": "Subjunctive and Conditional",
+                "fileNameBase": "Subjunctive_and_Conditional"
+            }
+        ],
+        [
+            {
+                "name": "Compound Future",
+                "shortName": "Compound Future",
+                "fileNameBase": "Compound_Future"
+            },
+            {
+                "name": "Prefixed Verbs of Motion",
+                "shortName": "Prefixed Verbs of Motion",
+                "fileNameBase": "Prefixed_Verbs_of_Motion"
+            }
+        ],
+        [
+            {
+                "name": "Nature 2",
+                "shortName": "Nature 2",
+                "fileNameBase": "Nature_2"
+            }
+        ],
+        [
+            {
+                "name": "Arts & Entertainment",
+                "shortName": "Arts & Entertainment",
+                "fileNameBase": "Arts_&_Entertainment"
+            },
+            {
+                "name": "Together",
+                "shortName": "Together",
+                "fileNameBase": "Together"
+            }
+        ],
+        [
+            {
+                "name": "Numbers 2",
+                "shortName": "Numbers 2",
+                "fileNameBase": "Numbers_2"
+            },
+            {
+                "name": "Adjectives 3",
+                "shortName": "Adjectives 3",
+                "fileNameBase": "Adjectives_3"
+            },
+            {
+                "name": "Plans",
+                "shortName": "Plans",
+                "fileNameBase": "Plans"
+            }
+        ],
+        [
+            {
+                "name": "Prepositions 2",
+                "shortName": "Prepositions 2",
+                "fileNameBase": "Prepositions_2"
+            }
+        ],
+        [
+            {
+                "name": "The Same",
+                "shortName": "The Same",
+                "fileNameBase": "The_Same"
+            },
+            {
+                "name": "Fleeting Vowels",
+                "shortName": "Fleeting Vowels",
+                "fileNameBase": "Fleeting_Vowels"
+            },
+            {
+                "name": "Space",
+                "shortName": "Space",
+                "fileNameBase": "Space"
+            }
+        ],
+        [
+            {
+                "name": "Measure",
+                "shortName": "Measure",
+                "fileNameBase": "Measure"
+            },
+            {
+                "name": "Business",
+                "shortName": "Business",
+                "fileNameBase": "Business"
+            }
+        ],
+        [
+            {
+                "name": "Prefixes",
+                "shortName": "Prefixes",
+                "fileNameBase": "Prefixes"
+            },
+            {
+                "name": "History & Fantasy",
+                "shortName": "History & Fantasy",
+                "fileNameBase": "History_&_Fantasy"
+            }
+        ],
+        [
+            {
+                "name": "An Introduction to Participles",
+                "shortName": "An Introduction to Participles",
+                "fileNameBase": "An_Introduction_to_Participles"
+            }
+        ],
+        [
+            {
+                "name": "Computers & Internet",
+                "shortName": "Computers & Internet",
+                "fileNameBase": "Computers_&_Internet"
+            },
+            {
+                "name": "Adverbial Participles",
+                "shortName": "Adverbial Participles",
+                "fileNameBase": "Adverbial_Participles"
+            }
+        ],
+        [
+            {
+                "name": "Science",
+                "shortName": "Science",
+                "fileNameBase": "Science"
+            }
+        ],
+        [
+            {
+                "name": "Politics and Government",
+                "shortName": "Politics and Government",
+                "fileNameBase": "Politics_and_Government"
+            },
+            {
+                "name": "Spiritual and Supernatural",
+                "shortName": "Spiritual and Supernatural",
+                "fileNameBase": "Spiritual_and_Supernatural"
+            }
+        ],
+        [
+            {
+                "name": "Science 2",
+                "shortName": "Science 2",
+                "fileNameBase": "Science_2"
+            }
+        ],
+        [
+            {
+                "name": "Some Spoken Patterns",
+                "shortName": "Some Spoken Patterns",
+                "fileNameBase": "Some_Spoken_Patterns"
+            },
+            {
+                "name": "Nothing Left",
+                "shortName": "Nothing Left",
+                "fileNameBase": "Nothing_Left"
+            }
+        ],
+        [
+            {
+                "name": "Crime and Justice",
+                "shortName": "Crime and Justice",
+                "fileNameBase": "Crime_and_Justice"
+            }
+        ],
+        [
+            {
+                "name": "Russia",
+                "shortName": "Russia",
+                "fileNameBase": "Russia"
+            }
+        ]
+    ]
+}
+
+        // --- APPLICATION STATE ---
+        let currentChallengeIndex = 0;
+        const challengesPerSession = 10;
+        let sessionChallenges = [];
+        let wrongAnswerQueue = [];
+        let currentAnswer = [];
+        let currentSkill = null;
+        let currentLevel = 1;
+        let currentSession = 1;
+        let isTypingRound = false; 
+        let isReviewing = false;
+
+        // --- DOM ELEMENTS ---
+        const skillTreeScreen = document.getElementById('skill-tree-screen');
+        const skillTreeContainer = document.getElementById('skill-tree-container');
+        const startScreen = document.getElementById('start-screen');
+        const mainApp = document.getElementById('main-app');
+        const startBtn = document.getElementById('start-btn');
+        const backToSkillsBtn = document.getElementById('back-to-skills-btn');
+        const quitLessonBtn = document.getElementById('quit-lesson-btn');
+        const startSkillTitle = document.getElementById('start-skill-title');
+        const progressBar = document.getElementById('progress-bar');
+        const challengeContainer = document.getElementById('challenge-container');
+        const userInputArea = document.getElementById('user-input-area');
+        const feedbackContainer = document.getElementById('feedback-container');
+
+        // --- FUNCTIONS ---
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        async function loadLessonData(skill, level, session) {
+    // Construct the filename, pointing to the Base64 directory
+    const fileName = `back/${skill.shortName.replace(/\s+/g, '_')}_level_${level}_session_${session}.json`;
+    try {
+        const response = await fetch(fileName);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const base64Text = await response.text();
+
+        // 1. Decode the Base64 string into a "binary" string
+        const binaryString = atob(base64Text);
+
+        // 2. Convert that binary string into an array of bytes
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // 3. Use TextDecoder to interpret the bytes as UTF-8. This is the crucial step.
+        const decoder = new TextDecoder('utf-8');
+        const decodedJsonString = decoder.decode(bytes);
+
+        // 4. Parse the correctly decoded JSON string
+        lessonData = JSON.parse(decodedJsonString);
+
+        return true;
+    } catch (error) {
+        console.error("Could not load lesson data:", error);
+        challengeContainer.innerHTML = `<p class="text-red-500 text-center">Error: Could not load the next lesson file ('${fileName}'). You may have completed all available lessons for this skill.</p>`;
+        startBtn.disabled = true;
+        return false;
+    }
+}
+
+        // --- NEW & REWRITTEN FUNCTIONS FOR UI FLOW ---
+
+// 1. (REPLACE) The main skill tree now shows overall status and opens the level view.
+// REPLACE your old renderSkillTree function with this one.
+function renderSkillTree() {
+    const skillTreeContainer = document.getElementById('skill-tree-container');
+    skillTreeContainer.innerHTML = '';
+    const userProgress = getProgress();
+
+    // Use .flat() to simplify iterating through all skills
+    skillTreeData.skills.flat().forEach(skill => {
+        const skillProgress = userProgress[skill.shortName];
+        const totalLevels = 5; // We assume 5 levels per skill
+        let completedLevels = 0;
+
+        // Calculate how many levels are 100% complete
+        if (skillProgress && skillProgress.levels) {
+            for (let i = 1; i <= totalLevels; i++) {
+                const levelData = skillProgress.levels[i];
+                if (levelData && levelData.total > 0 && levelData.completed === levelData.total) {
+                    completedLevels++;
+                }
+            }
+        }
+        
+        const overallPercentage = Math.round((completedLevels / totalLevels) * 100);
+
+        const skillElement = document.createElement('div');
+        skillElement.className = 'p-4 rounded-2xl flex items-center gap-4 shadow-sm transition-all bg-white cursor-pointer hover:bg-slate-50';
+        
+        skillElement.innerHTML = `
+            ${createPieChart(overallPercentage, true)}
+            <div class="flex-grow">
+                <h3 class="font-bold text-xl">${skill.name}</h3>
+                <p class="text-sm text-slate-600">${completedLevels} of ${totalLevels} levels masterd</p>
+            </div>
+            <div class="text-slate-400">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                 </svg>
+            </div>
+        `;
+
+        // The click action remains the same: it shows the detailed level view
+        skillElement.onclick = () => showLevelView(skill);
+        skillTreeContainer.appendChild(skillElement);
+    });
+}
+
+// --- DEVELOPER TESTING FUNCTIONS ---
+// These functions can be called from the browser's developer console (F12) for easy testing.
+
+/**
+ * Instantly marks a specific level as 100% complete.
+ * @param {string} skillShortName - The short name of the skill (e.g., 'Intro', 'Jobs').
+ * @param {number} level - The level number to complete (e.g., 1, 2).
+ */
+function dev_masterLevel(skillShortName, level) {
+    console.log(`🛠️ Mastering level ${level} for skill '${skillShortName}'...`);
+    const progress = getProgress();
+    if (!progress[skillShortName]) {
+        progress[skillShortName] = { levels: {} };
+    }
+    // Set completed and total to a dummy value to mark as 100% complete.
+    progress[skillShortName].levels[level] = { completed: 10, total: 10 };
+    localStorage.setItem('russianAppProgress', JSON.stringify(progress));
+    console.log('✅ Progress updated. Reloading page to apply changes...');
+    location.reload();
+}
+
+/**
+ * Instantly masters all 5 levels for a given skill.
+ * @param {string} skillShortName - The short name of the skill to master.
+ */
+function dev_masterSkill(skillShortName) {
+    console.log(`🚀 Mastering ALL levels for skill '${skillShortName}'...`);
+    const progress = getProgress();
+    if (!progress[skillShortName]) {
+        progress[skillShortName] = { levels: {} };
+    }
+    for (let i = 1; i <= 5; i++) {
+        progress[skillShortName].levels[i] = { completed: 10, total: 10 };
+    }
+    localStorage.setItem('russianAppProgress', JSON.stringify(progress));
+    console.log('✅ All levels mastered. Reloading page to apply changes...');
+    location.reload();
+}
+
+/**
+ * Clears all progress data and resets the app to its initial state.
+ */
+function dev_clearProgress() {
+    console.warn('🔥 Clearing all user progress...');
+    localStorage.removeItem('russianAppProgress');
+    console.log('✅ Progress cleared. Reloading page...');
+    location.reload();
+}
+
+// 2. (NEW) This function shows the new level view screen.
+function showLevelView(skill) {
+    currentSkill = skill; // Set the current skill
+    skillTreeScreen.classList.add('hidden');
+    startScreen.classList.add('hidden');
+    document.getElementById('level-view-screen').classList.remove('hidden');
+    
+    document.getElementById('level-view-title').textContent = skill.name;
+    renderLevelView(skill);
+}
+
+// 3. (NEW) This function renders the list of levels for a skill.
+// NOTE: This assumes a max of 5 levels per skill. Adjust as needed.
+function renderLevelView(skill) {
+    const levelContainer = document.getElementById('level-container');
+    levelContainer.innerHTML = '';
+    const userProgress = getProgress();
+    const skillProgress = userProgress[skill.shortName];
+
+    // Let's assume there are 5 levels for this skill.
+    const totalLevels = 5; 
+
+    for (let i = 1; i <= totalLevels; i++) {
+        const levelData = skillProgress?.levels?.[i];
+        const prevLevelData = skillProgress?.levels?.[i - 1];
+
+        // Level is unlocked if it's the first one, or if the previous level is 100% complete.
+        const isUnlocked = (i === 1) || (prevLevelData && prevLevelData.completed === prevLevelData.total);
+        
+        const completed = levelData?.completed || 0;
+        const total = levelData?.total || 1; // Avoid division by zero
+        const percentage = Math.round((completed / total) * 100);
+
+        const levelElement = document.createElement('div');
+        levelElement.className = `p-4 rounded-2xl flex items-center gap-4 shadow-sm transition-all ${isUnlocked ? 'bg-white cursor-pointer hover:bg-slate-50' : 'bg-slate-200 text-slate-500'}`;
+        
+        let buttonText = isUnlocked ? 'Start' : 'Locked';
+        if (percentage === 100) {
+            buttonText = 'Review';
+        } else if (percentage > 0) {
+            buttonText = 'Continue';
+        }
+
+        levelElement.innerHTML = `
+            ${createPieChart(percentage, isUnlocked)}
+            <div class="flex-grow">
+                <h3 class="font-bold text-lg">Level ${i}</h3>
+                <p class="text-sm">${isUnlocked ? `Progress: ${percentage}%` : 'Complete the previous level to unlock'}</p>
+            </div>
+            <button class="font-bold py-2 px-6 rounded-xl text-white ${isUnlocked ? (percentage === 100 ? 'bg-green-500' : 'bg-blue-500') : 'bg-slate-400'}" ${!isUnlocked ? 'disabled' : ''}>
+                ${buttonText}
+            </button>
+        `;
+
+        if (isUnlocked) {
+            levelElement.onclick = () => {
+                currentLevel = i;
+                currentSession = 1; // Assuming one session per level for now
+                startLesson();
+            };
+        }
+        levelContainer.appendChild(levelElement);
+    }
+}
+
+// 4. (NEW) A helper function to generate an SVG pie chart.
+function createPieChart(percentage, isUnlocked) {
+    const radius = 25;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (percentage / 100) * circumference;
+    const color = isUnlocked ? (percentage === 100 ? '#4ade80' : '#3b82f6') : '#94a3b8'; // green, blue, slate
+
+    return `
+        <div class="relative w-16 h-16">
+            <svg class="w-full h-full" viewBox="0 0 60 60">
+                <circle class="text-slate-200" stroke-width="5" stroke="currentColor" fill="transparent" r="${radius}" cx="30" cy="30" />
+                <circle
+                    class="progress-ring__circle"
+                    stroke-width="5"
+                    stroke-dasharray="${circumference}"
+                    stroke-dashoffset="${offset}"
+                    stroke="${color}"
+                    fill="transparent"
+                    r="${radius}"
+                    cx="30"
+                    cy="30"
+                />
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center font-bold text-sm ${isUnlocked ? 'text-slate-700' : 'text-slate-500'}">${percentage === 100 ? '✓' : percentage + '%'}</span>
+        </div>
+    `;
+}
+
+// 5. (MODIFY) Update event listeners for the new back buttons
+function init() {
+    renderSkillTree();
+    // New listener for the back button on the level view screen
+    document.getElementById('back-to-skills-from-levels-btn').onclick = () => {
+        document.getElementById('level-view-screen').classList.add('hidden');
+        skillTreeScreen.classList.remove('hidden');
+    };
+}
+
+// Finally, make sure the original `showSkillTree` function hides the new level screen
+function showSkillTree() {
+    mainApp.classList.add('hidden');
+    startScreen.classList.add('hidden');
+    document.getElementById('level-view-screen').classList.add('hidden'); // Add this line
+    skillTreeScreen.classList.remove('hidden');
+    renderSkillTree(); // Re-render to show latest progress
+}
+
+        function showStartScreen(skill) {
+            const userProgress = getProgress();
+            const skillProgress = userProgress[skill.shortName];
+            
+            currentSkill = skill;
+            // Load saved progress or start from the beginning
+            currentLevel = skillProgress ? skillProgress.level : 1; 
+            currentSession = skillProgress ? skillProgress.session : 1;
+
+            skillTreeScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            startSkillTitle.textContent = `${skill.name} - Level ${currentLevel}, Session ${currentSession}`;
+            startBtn.disabled = false;
+        }
+
+        // MODIFY the startLesson function
+        async function startLesson() {
+            console.log(`--- Starting Lesson: ${currentSkill.name} | Level ${currentLevel} | Session ${currentSession} ---`);
+            const dataLoaded = await loadLessonData(currentSkill, currentLevel, currentSession);
+            if (!dataLoaded) return;
+
+            // --- THIS IS THE KEY CHANGE ---
+            // Remove .slice() to use all challenges from the file
+            sessionChallenges = shuffle([...lessonData.challenges]); 
+            // --- END OF CHANGE ---
+
+            if (sessionChallenges.length === 0) {
+                console.error("No challenges found in the lesson file.");
+                alert("Error: This lesson appears to be empty.");
+                showSkillTree();
+                return;
+            }
+
+            // Hide the level view and show the main app
+            document.getElementById('level-view-screen').classList.add('hidden');
+            mainApp.classList.remove('hidden');
+
+            wrongAnswerQueue = [];
+            isTypingRound = false;
+            isReviewing = false;
+            currentChallengeIndex = 0;
+            loadChallenge();
+        }
+        
+        function loadChallenge() {
+            if (currentChallengeIndex >= sessionChallenges.length) {
+                if (!isTypingRound) {
+                    console.log("--- Starting Typing Round ---");
+                    isTypingRound = true;
+                    currentChallengeIndex = 0;
+                    challengeContainer.innerHTML = `<div class="text-center py-8"><h2 class="text-2xl font-bold">Great! Now for the typing round...</h2></div>`;
+                    setTimeout(loadChallenge, 1500); 
+                    return;
+                } else if (!isReviewing && wrongAnswerQueue.length > 0) {
+                    console.log("--- Starting Review Round for Incorrect Answers ---");
+                    isReviewing = true;
+                    sessionChallenges = shuffle([...wrongAnswerQueue]);
+                    wrongAnswerQueue = [];
+                    currentChallengeIndex = 0;
+                } else {
+                    endSession();
+                    return;
+                }
+            }
+
+            let challenge = sessionChallenges[currentChallengeIndex];
+            
+            // LOG: Log the entire challenge object being loaded
+            console.log(`Loading challenge ${currentChallengeIndex + 1}/${sessionChallenges.length}:`, challenge);
+
+            // FIX: Skip challenges that are missing a prompt or only contain punctuation
+            if (!challenge.prompt || challenge.prompt.replace(/[.,?!—\s]/g, '').length === 0) {
+                console.warn("Skipping challenge with empty or invalid prompt.", challenge);
+                currentChallengeIndex++;
+                loadChallenge();
+                return;
+            }
+            
+            updateProgressBar();
+            clearContainers();
+
+            let challengeType = getChallengeType(challenge);
+            
+            if (challengeType === 'unsupported') {
+                console.warn("Unsupported challenge type found, skipping:", challenge.type);
+                currentChallengeIndex++;
+                loadChallenge();
+                return;
+            }
+
+            switch (challengeType) {
+                case 'translate-en-ru-select':
+                case 'translate-ru-en-select':
+                case 'listen-ru-select':
+                    renderTranslateSelect(challenge);
+                    break;
+                case 'listen-ru-type':
+                    renderListenType(challenge);
+                    break;
+                case 'translate-en-ru-type':
+                case 'translate-ru-en-type':
+                    renderTranslateType(challenge);
+                    break;
+            }
+        }
+
+        function getChallengeType(challenge) {
+            const isSelectionRound = !isTypingRound && !isReviewing;
+            
+            // FIX: Skip Russian-to-Russian or English-to-English translations
+            if (challenge.type === 'translate' && challenge.sourceLanguage === challenge.targetLanguage) {
+                return 'unsupported';
+            }
+
+            if (challenge.type === 'selectTranscription' || challenge.type === 'gapFill' || challenge.type === 'speak' || challenge.type === 'listenSpeak') {
+                return 'unsupported';
+            }
+
+            let determinedType = 'unsupported';
+            if (challenge.type === 'listen') {
+                determinedType = isSelectionRound ? 'listen-ru-select' : 'listen-ru-type';
+            }
+            if (challenge.type === 'translate') {
+                if (challenge.sourceLanguage === 'en' && challenge.targetLanguage === 'ru') {
+                    determinedType = isSelectionRound ? 'translate-en-ru-select' : 'translate-en-ru-type';
+                }
+                if (challenge.sourceLanguage === 'ru' && challenge.targetLanguage === 'en') {
+                    determinedType = isSelectionRound ? 'translate-ru-en-select' : 'translate-ru-en-type';
+                }
+            }
+            // LOG: Log the determined challenge type
+            console.log(`Challenge type '${challenge.type}' determined as '${determinedType}'`);
+            return determinedType;
+        }
+
+        function renderTranslateSelect(challenge) {
+            let title = "Translate this sentence";
+            if(challenge.type === 'listen') {
+                title = "Select what you hear";
+            }
+
+            // --- MODIFICATIONS START HERE ---
+
+            // 1. Build the HTML for a small, persistent audio button if TTS is available
+            let audioButtonHTML = '';
+            if (challenge.tts) {
+                audioButtonHTML = `
+                    <button id="replay-audio-btn" class="mr-4 text-blue-500 hover:text-blue-600 transition-transform transform hover:scale-110 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                `;
+            }
+            
+            // 2. Determine the main prompt content based on the challenge type
+            let promptContent = '';
+            if (challenge.type === 'listen') {
+                // For dedicated listening challenges, keep the original large button
+                promptContent = renderAudioButton(challenge);
+            } else {
+                // For translation challenges, show the new replay button next to the sentence
+                promptContent = `
+                    <div class="flex items-center justify-center text-2xl md:text-3xl font-semibold text-slate-800">
+                        ${audioButtonHTML}
+                        ${generateHoverableSentence(challenge)}
+                    </div>
+                `;
+            }
+
+            challengeContainer.innerHTML = `
+                <h2 class="text-xl md:text-2xl font-bold text-slate-700 mb-6 text-center">${title}</h2>
+                <div class="p-4 bg-slate-50 rounded-2xl min-h-[100px] flex items-center justify-center">
+                    ${promptContent}
+                </div>
+            `;
+            
+            // 3. Find the new button (if it was rendered) and attach the click event to play the audio
+            const replayBtn = document.getElementById('replay-audio-btn');
+            if (replayBtn) {
+                replayBtn.onclick = () => new Audio(challenge.tts).play();
+            }
+            
+            // --- MODIFICATIONS END HERE ---
+
+
+            // The rest of the function remains the same
+            const options = shuffle([...(challenge.choices || [])]);
+            userInputArea.innerHTML = `
+                <div id="answer-area" class="min-h-[60px] border-b-2 border-slate-300 mb-6 p-2 flex flex-wrap gap-2 items-center"></div>
+                <div id="options-area" class="flex flex-wrap gap-3 justify-center">
+                    ${options.map(choice => `<button class="word-option bg-white border-2 border-slate-300 text-slate-700 font-bold py-2 px-5 rounded-2xl hover:bg-slate-200 transition-all" data-tts="${choice.tts || ''}">${choice.text}</button>`).join('')}
+                </div>
+                <button id="check-btn" class="w-full mt-8 bg-green-500 text-white font-bold py-3 px-4 rounded-2xl text-lg hover:bg-green-600 disabled:bg-slate-400 shadow-md" disabled>Check</button>
+            `;
+            setupWordSelection();
+            if(challenge.tts) new Audio(challenge.tts).play();
+        }
+
+        function renderListenType(challenge) {
+            challengeContainer.innerHTML = `
+                <h2 class="text-xl md:text-2xl font-bold text-slate-700 mb-6 text-center">Type what you hear</h2>
+                <div class="flex items-center justify-center">
+                    ${renderAudioButton(challenge)}
+                </div>
+            `;
+            userInputArea.innerHTML = `
+                <textarea id="typing-answer" rows="3" class="w-full p-3 border-2 border-slate-300 rounded-2xl text-lg focus:ring-2 focus:ring-blue-500" placeholder="Type in Russian..."></textarea>
+                <button id="check-btn" class="w-full mt-4 bg-green-500 text-white font-bold py-3 px-4 rounded-2xl text-lg hover:bg-green-600 shadow-md">Check</button>
+            `;
+            document.getElementById('check-btn').onclick = () => checkTypedAnswer();
+            if(challenge.tts) new Audio(challenge.tts).play();
+        }
+
+        function renderTranslateType(challenge) {
+             challengeContainer.innerHTML = `
+                <h2 class="text-xl md:text-2xl font-bold text-slate-700 mb-6 text-center">Write this in ${challenge.targetLanguage === 'ru' ? 'Russian' : 'English'}</h2>
+                <div class="text-center text-2xl md:text-3xl p-4 bg-slate-50 rounded-2xl min-h-[100px] font-semibold text-slate-800">
+                 ${generateHoverableSentence(challenge)}
+                </div>
+            `;
+            userInputArea.innerHTML = `
+                <textarea id="typing-answer" rows="3" class="w-full p-3 border-2 border-slate-300 rounded-2xl text-lg focus:ring-2 focus:ring-blue-500" placeholder="Type in ${challenge.targetLanguage === 'ru' ? 'Russian' : 'English'}..."></textarea>
+                <button id="check-btn" class="w-full mt-4 bg-green-500 text-white font-bold py-3 px-4 rounded-2xl text-lg hover:bg-green-600 shadow-md">Check</button>
+            `;
+            document.getElementById('check-btn').onclick = () => checkTypedAnswer();
+            if(challenge.tts) new Audio(challenge.tts).play();
+        }
+
+        function renderAudioButton(challenge) {
+            const button = `<button id="play-audio-btn" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform transform hover:scale-110">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0M21.015 10.356L17.834 7.172m0 0v4.992m0-4.992a8.25 8.25 0 0111.664 0" />
+                        </svg>
+                    </button>`;
+            setTimeout(() => {
+                 document.getElementById('play-audio-btn').onclick = () => new Audio(challenge.tts).play();
+            }, 0);
+            return button;
+        }
+                // --- HELPER FUNCTIONS FOR PROGRESS ---
+        function getProgress() {
+            // Safely parse progress from localStorage, or return an empty object if none exists.
+            return JSON.parse(localStorage.getItem('russianAppProgress') || '{}');
+        }
+
+        // REPLACE your old saveProgress function
+        function saveProgress(skillShortName, level, completedCount, totalCount) {
+            const progress = getProgress();
+            if (!progress[skillShortName]) {
+                progress[skillShortName] = { levels: {} };
+            }
+            progress[skillShortName].levels[level] = {
+                completed: completedCount,
+                total: totalCount
+            };
+            localStorage.setItem('russianAppProgress', JSON.stringify(progress));
+            console.log('Progress saved:', progress);
+        }
+
+        function getChallengeTokens(challenge) {
+            return challenge.tokens;
+        }
+        
+        function generateHoverableSentence(challenge) {
+            console.log(challenge)
+            if (!challenge.prompt) return '';
+            
+            const challengeTokens = getChallengeTokens(challenge);
+            if (!challengeTokens) return challenge.prompt;
+
+            let promptWords = challenge.prompt.match(/([\p{L}\p{N}]+|[.,?!'’—])|(\s+)/gu) || [];
+            let sentenceHTML = `<div class="flex flex-wrap justify-center items-center">`;
+            
+            promptWords.forEach(word => {
+                if (word.trim() === '') {
+                    sentenceHTML += `<span>&nbsp;</span>`;
+                    return;
+                }
+                const cleanWord = word.replace(/[.,?!'’—]/g, '');
+
+                const tokenInfo = challengeTokens.find(t => {
+                    const tokenText = (typeof t === 'object' && t.value) ? t.value.replace(/[.,?!'’—]/g, '') : t;
+                    return typeof tokenText === 'string' && tokenText === cleanWord;
+                });
+                
+                if (tokenInfo && typeof tokenInfo === 'object' && tokenInfo.hintTable && tokenInfo.hintTable.rows.length > 0 && tokenInfo.hintTable.rows[0][0].hint) {
+                    const hint = tokenInfo.hintTable.rows[0][0].hint;
+                    sentenceHTML += `<span class="word-token">${word}<span class="tooltip">${hint}</span></span>`;
+                } else {
+                    sentenceHTML += `<span>${word}</span>`;
+                }
+            });
+            sentenceHTML += `</div>`;
+            return sentenceHTML;
+        }
+
+        function setupWordSelection() {
+            const optionsArea = document.getElementById('options-area');
+            const answerArea = document.getElementById('answer-area');
+            const checkBtn = document.getElementById('check-btn');
+
+            optionsArea.addEventListener('click', e => {
+                if (e.target.classList.contains('word-option')) {
+                    const ttsUrl = e.target.dataset.tts;
+                    if (ttsUrl) {
+                        new Audio(ttsUrl).play();
+                    }
+                    
+                    const word = e.target.textContent;
+                    currentAnswer.push(word);
+                    e.target.classList.add('hidden');
+                    updateAnswerArea();
+                    checkBtn.disabled = false;
+                }
+            });
+
+            answerArea.addEventListener('click', e => {
+                if (e.target.classList.contains('word-option')) {
+                    const word = e.target.textContent;
+                    const index = currentAnswer.indexOf(word);
+                    if (index > -1) {
+                        currentAnswer.splice(index, 1);
+                    }
+                    
+                    const optionButtons = optionsArea.getElementsByClassName('word-option');
+                    for(let btn of optionButtons) {
+                        if(btn.textContent === word && btn.classList.contains('hidden')) {
+                            btn.classList.remove('hidden');
+                            break;
+                        }
+                    }
+                    updateAnswerArea();
+                    if(currentAnswer.length === 0) {
+                        checkBtn.disabled = true;
+                    }
+                }
+            });
+            
+            checkBtn.onclick = () => checkSelectedAnswer();
+        }
+
+        function updateAnswerArea() {
+            const answerArea = document.getElementById('answer-area');
+            answerArea.innerHTML = currentAnswer.map(word => `<button class="word-option bg-slate-200 text-slate-800 font-bold py-2 px-5 rounded-2xl">${word}</button>`).join('');
+        }
+        
+        function checkSelectedAnswer() {
+            const challenge = sessionChallenges[currentChallengeIndex];
+            const userAnswer = currentAnswer.join(' ');
+            let isCorrect = false;
+            
+            // FIX: Regex now includes em dash '—'
+            const clean = (str) => str.replace(/[.,?!—]/g, '');
+
+            if (challenge.correctSolutions && Array.isArray(challenge.correctSolutions)) {
+                isCorrect = challenge.correctSolutions.some(sol => clean(sol) === clean(userAnswer));
+            } else if (challenge.solutionTranslation) {
+                isCorrect = clean(challenge.solutionTranslation) === clean(userAnswer);
+            }
+            // LOG: Log answer check
+            console.log("Checking selected answer:", { userAnswer, correctSolutions: challenge.correctSolutions, isCorrect });
+            showFeedback(isCorrect);
+        }
+
+        function checkTypedAnswer() {
+            const challenge = sessionChallenges[currentChallengeIndex];
+            const userAnswer = document.getElementById('typing-answer').value.trim().toLowerCase();
+            let isCorrect = false;
+
+            // FIX: Regex now includes em dash '—'
+            const clean = (str) => str.replace(/[.,?!—]/g, '').toLowerCase();
+            const userAnswerClean = clean(userAnswer);
+
+            if (challenge.correctSolutions && Array.isArray(challenge.correctSolutions)) {
+                isCorrect = challenge.correctSolutions.some(sol => clean(sol) === userAnswerClean);
+            } else if (challenge.solutionTranslation) {
+                isCorrect = clean(challenge.solutionTranslation) === userAnswerClean;
+            }
+
+            // LOG: Log answer check
+            console.log("Checking typed answer:", { userAnswer, userAnswerClean, correctSolutions: challenge.correctSolutions, isCorrect });
+            showFeedback(isCorrect);
+        }
+
+        function showFeedback(isCorrect) {
+            console.log(`Feedback: Answer was ${isCorrect ? 'Correct' : 'Incorrect'}.`);
+            const challenge = sessionChallenges[currentChallengeIndex];
+            if (!isCorrect) {
+                 if (!wrongAnswerQueue.find(c => c.id === challenge.id)) {
+                    wrongAnswerQueue.push(challenge);
+                }
+            } else if (isReviewing) {
+                const originalIndex = sessionChallenges.findIndex(c => c.id === challenge.id);
+                if(originalIndex > -1) sessionChallenges.splice(originalIndex, 1);
+                currentChallengeIndex--;
+            }
+
+            const correctSolution = challenge.correctSolutions ? challenge.correctSolutions[0] : (challenge.solutionTranslation || '');
+            
+            let feedbackHTML = '';
+            if (isCorrect) {
+                feedbackHTML = `
+                    <div class="feedback bg-green-100 border-t-8 border-green-400 text-green-800 p-6 rounded-b-2xl">
+                        <p class="font-extrabold text-2xl">Correct!</p>
+                    </div>
+                `;
+            } else {
+                feedbackHTML = `
+                    <div class="feedback bg-red-100 border-t-8 border-red-400 text-red-800 p-6 rounded-b-2xl">
+                        <p class="font-extrabold text-2xl">Incorrect</p>
+                        <p class="mt-2 text-lg">Correct solution: <span class="font-bold">${correctSolution}</span></p>
+                    </div>
+                `;
+            }
+
+            userInputArea.querySelector('#check-btn').classList.add('hidden');
+            
+            const continueBtn = document.createElement('button');
+            continueBtn.textContent = 'Continue';
+            continueBtn.className = `w-full mt-4 ${isCorrect ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white font-bold py-3 px-4 rounded-2xl text-lg shadow-md`;
+            continueBtn.onclick = () => {
+                currentChallengeIndex++;
+                loadChallenge();
+            };
+            feedbackContainer.innerHTML = feedbackHTML;
+            feedbackContainer.appendChild(continueBtn);
+        }
+        
+        function updateProgressBar() {
+             const totalTasks = sessionChallenges.length * (isReviewing ? 1 : 2);
+             let completedTasks = currentChallengeIndex;
+             if (isTypingRound) completedTasks += sessionChallenges.length;
+
+            const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+            progressBar.style.width = `${Math.min(progress, 100)}%`;
+        }
+        
+        function clearContainers() {
+            challengeContainer.innerHTML = '';
+            userInputArea.innerHTML = '';
+            feedbackContainer.innerHTML = '';
+            currentAnswer = [];
+        }
+
+        // MODIFY the endSession function
+        function endSession() {
+            console.log("--- Session Ended ---");
+            
+            const totalChallengesInSession = sessionChallenges.length;
+            // Save progress: mark all challenges in this level as completed.
+            saveProgress(currentSkill.shortName, currentLevel, totalChallengesInSession, totalChallengesInSession);
+
+            progressBar.style.width = '100%';
+            clearContainers();
+            
+            challengeContainer.innerHTML = `
+                <div class="text-center py-8">
+                    <h2 class="text-4xl font-extrabold text-yellow-500 mb-4">Level Complete!</h2>
+                    <p class="text-slate-700 text-xl mb-8">Great job! You've finished all challenges for this level.</p>
+                    <button id="back-to-levels-after-lesson-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-2xl text-lg transition-transform transform hover:scale-105">
+                        Back to Levels
+                    </button>
+                </div>
+            `;
+            
+            // This button takes the user back to the level view for the current skill
+            document.getElementById('back-to-levels-after-lesson-btn').onclick = () => {
+                mainApp.classList.add('hidden');
+                showLevelView(currentSkill); // Go back to the level view for the skill you just played
+            };
+        }
+
+        startBtn.addEventListener('click', startLesson);
+        backToSkillsBtn.addEventListener('click', showSkillTree);
+        quitLessonBtn.addEventListener('click', showSkillTree);
+        
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+
+</body>
+</html>
