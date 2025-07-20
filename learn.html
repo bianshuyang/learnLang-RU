@@ -123,6 +123,13 @@
 
    <script>
         let lessonData = {}; 
+       // --- NEW DEVELOPER STATE VARIABLES ---
+    let DEBUG_MODE_ENABLED = false;
+    let DEV_AUTO_ADVANCE = false;
+    let DEV_AUTO_ANSWER_CORRECTLY = false; // New flag for auto-correcting
+    let DEV_QUICK_TRANSITION_MS = 500; // Time for auto-advance/feedback
+    let DEV_TEST_CHALLENGES_PER_SESSION = 5; // Override for challenges per session in dev mode
+
         const skillTreeData = {
     "skills": [
         [
@@ -715,6 +722,58 @@
         let isTypingRound = false; 
         let isReviewing = false;
 
+       /**
+     * Toggles the main debug mode and related auto-features.
+     * @param {boolean} enable - True to enable debug mode, false to disable.
+     * @param {boolean} autoAdvance - (Optional) True to enable auto-advancing challenges.
+     * @param {boolean} autoCorrect - (Optional) True to make answers always correct.
+     * @param {number} quickTransitionMs - (Optional) Milliseconds for quick transitions.
+     * @param {number} testChallengesCount - (Optional) Number of challenges per session for testing.
+     */
+    function dev_setTestMode(enable, autoAdvance, autoCorrect, quickTransitionMs, testChallengesCount) {
+        DEBUG_MODE_ENABLED = enable;
+        DEV_AUTO_ADVANCE = autoAdvance !== undefined ? autoAdvance : enable;
+        DEV_AUTO_ANSWER_CORRECTLY = autoCorrect !== undefined ? autoCorrect : enable;
+        DEV_QUICK_TRANSITION_MS = quickTransitionMs !== undefined ? quickTransitionMs : (enable ? 200 : 500); // Shorter for full automation
+        DEV_TEST_CHALLENGES_PER_SESSION = testChallengesCount !== undefined ? testChallengesCount : (enable ? 3 : 10); // Very few challenges for quick tests
+
+        console.log(`🛠️ Debug Mode: ${DEBUG_MODE_ENABLED}`);
+        console.log(`🛠️ Auto Advance: ${DEV_AUTO_ADVANCE}`);
+        console.log(`🛠️ Auto Answer Correctly: ${DEV_AUTO_ANSWER_CORRECTLY}`);
+        console.log(`🛠️ Quick Transition MS: ${DEV_QUICK_TRANSITION_MS}`);
+        console.log(`🛠️ Test Challenges Per Session: ${DEV_TEST_CHALLENGES_PER_SESSION}`);
+
+        if (!DEBUG_MODE_ENABLED) {
+            // Reset to default values if debug mode is turned off
+            DEV_AUTO_ADVANCE = false;
+            DEV_AUTO_ANSWER_CORRECTLY = false;
+            DEV_QUICK_TRANSITION_MS = 500;
+            DEV_TEST_CHALLENGES_PER_SESSION = 10;
+        }
+        renderSkillTree(); // Re-render to reflect any changes if needed (e.g., if progress was reset)
+    }
+
+    /**
+     * Jumps directly to a specific lesson (skill, level, session) and starts it.
+     * @param {string} skillShortName - The short name of the skill (e.g., 'Intro', 'Jobs').
+     * @param {number} level - The level number (e.g., 1, 2).
+     * @param {number} session - The session number (e.g., 1, 2).
+     */
+    async function dev_jumpToLesson(skillShortName, level, session) {
+        console.log(`🚀 Jumping to skill: ${skillShortName}, Level: ${level}, Session: ${session}`);
+        const skill = skillTreeData.skills.flat().find(s => s.shortName === skillShortName);
+        if (!skill) {
+            console.error(`Skill '${skillShortName}' not found.`);
+            return;
+        }
+
+        currentSkill = skill;
+        currentLevel = level;
+        currentSession = session;
+
+        await startLesson();
+        console.log(`✅ Lesson started for ${skillShortName} Level ${level} Session ${session}.`);
+    }
         // --- DOM ELEMENTS ---
         const skillTreeScreen = document.getElementById('skill-tree-screen');
         const skillTreeContainer = document.getElementById('skill-tree-container');
@@ -776,31 +835,30 @@
 }
 
         // --- NEW & REWRITTEN FUNCTIONS FOR UI FLOW ---
-
-// 1. (REPLACE) The main skill tree now shows overall status and opens the level view.
-// REPLACE your old renderSkillTree function with this one.
+// MODIFY renderSkillTree function
 function renderSkillTree() {
     const skillTreeContainer = document.getElementById('skill-tree-container');
     skillTreeContainer.innerHTML = '';
     const userProgress = getProgress();
 
-    // Use .flat() to simplify iterating through all skills
+    const totalLevelsPerSkill = 5; // Each skill has 5 levels
+    const totalSessionsPerLevel = 7; // Each level has 7 sessions
+
     skillTreeData.skills.flat().forEach(skill => {
         const skillProgress = userProgress[skill.shortName];
-        const totalLevels = 5; // We assume 5 levels per skill
         let completedLevels = 0;
 
-        // Calculate how many levels are 100% complete
         if (skillProgress && skillProgress.levels) {
-            for (let i = 1; i <= totalLevels; i++) {
+            for (let i = 1; i <= totalLevelsPerSkill; i++) {
                 const levelData = skillProgress.levels[i];
-                if (levelData && levelData.total > 0 && levelData.completed === levelData.total) {
+                // A level is considered completed if all its sessions are done
+                if (levelData && levelData.completedSessions === totalSessionsPerLevel) {
                     completedLevels++;
                 }
             }
         }
         
-        const overallPercentage = Math.round((completedLevels / totalLevels) * 100);
+        const overallPercentage = Math.round((completedLevels / totalLevelsPerSkill) * 100);
 
         const skillElement = document.createElement('div');
         skillElement.className = 'p-4 rounded-2xl flex items-center gap-4 shadow-sm transition-all bg-white cursor-pointer hover:bg-slate-50';
@@ -809,16 +867,15 @@ function renderSkillTree() {
             ${createPieChart(overallPercentage, true)}
             <div class="flex-grow">
                 <h3 class="font-bold text-xl">${skill.name}</h3>
-                <p class="text-sm text-slate-600">${completedLevels} of ${totalLevels} levels masterd</p>
+                <p class="text-sm text-slate-600">${completedLevels} of ${totalLevelsPerSkill} levels mastered</p>
             </div>
             <div class="text-slate-400">
-                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                 </svg>
+                </svg>
             </div>
         `;
 
-        // The click action remains the same: it shows the detailed level view
         skillElement.onclick = () => showLevelView(skill);
         skillTreeContainer.appendChild(skillElement);
     });
@@ -886,25 +943,27 @@ function showLevelView(skill) {
 
 // 3. (NEW) This function renders the list of levels for a skill.
 // NOTE: This assumes a max of 5 levels per skill. Adjust as needed.
+// MODIFY renderLevelView function
 function renderLevelView(skill) {
     const levelContainer = document.getElementById('level-container');
     levelContainer.innerHTML = '';
     const userProgress = getProgress();
     const skillProgress = userProgress[skill.shortName];
 
-    // Let's assume there are 5 levels for this skill.
-    const totalLevels = 5; 
+    const totalLevels = 5; // Assumed 5 levels per skill.
+    const totalSessionsPerLevel = 7; // Assuming 7 sessions per level. Make sure this matches your data structure.
 
     for (let i = 1; i <= totalLevels; i++) {
         const levelData = skillProgress?.levels?.[i];
         const prevLevelData = skillProgress?.levels?.[i - 1];
 
-        // Level is unlocked if it's the first one, or if the previous level is 100% complete.
         const isUnlocked = (i === 1) || (prevLevelData && prevLevelData.completed === prevLevelData.total);
         
-        const completed = levelData?.completed || 0;
-        const total = levelData?.total || 1; // Avoid division by zero
-        const percentage = Math.round((completed / total) * 100);
+        // --- KEY CHANGE HERE ---
+        // Calculate progress based on completed sessions for this specific level
+        const completedSessionsForLevel = levelData?.completedSessions || 0;
+        const percentage = Math.round((completedSessionsForLevel / totalSessionsPerLevel) * 100);
+        // --- END KEY CHANGE ---
 
         const levelElement = document.createElement('div');
         levelElement.className = `p-4 rounded-2xl flex items-center gap-4 shadow-sm transition-all ${isUnlocked ? 'bg-white cursor-pointer hover:bg-slate-50' : 'bg-slate-200 text-slate-500'}`;
@@ -920,7 +979,7 @@ function renderLevelView(skill) {
             ${createPieChart(percentage, isUnlocked)}
             <div class="flex-grow">
                 <h3 class="font-bold text-lg">Level ${i}</h3>
-                <p class="text-sm">${isUnlocked ? `Progress: ${percentage}%` : 'Complete the previous level to unlock'}</p>
+                <p class="text-sm">${isUnlocked ? `Progress: ${percentage}% (${completedSessionsForLevel}/${totalSessionsPerLevel} sessions)` : 'Complete the previous level to unlock'}</p>
             </div>
             <button class="font-bold py-2 px-6 rounded-xl text-white ${isUnlocked ? (percentage === 100 ? 'bg-green-500' : 'bg-blue-500') : 'bg-slate-400'}" ${!isUnlocked ? 'disabled' : ''}>
                 ${buttonText}
@@ -932,16 +991,12 @@ function renderLevelView(skill) {
                 currentLevel = i;
                 
                 // Determine the next session to play
-                const levelProgress = skillProgress?.levels?.[i];
-                const lastCompletedSession = levelProgress?.session || 0;
+                const lastCompletedSession = levelData?.completedSessions || 0; // Use completedSessions
                 
-                // Assuming 7 sessions per level
-                if (lastCompletedSession >= 7) {
-                    // If all sessions are done, let them review session 1
-                    currentSession = 1; 
+                if (lastCompletedSession >= totalSessionsPerLevel) { // Check against totalSessionsPerLevel
+                    currentSession = 1; // If all sessions are done, let them review session 1
                 } else {
-                    // Otherwise, play the next session
-                    currentSession = lastCompletedSession + 1;
+                    currentSession = lastCompletedSession + 1; // Otherwise, play the next session
                 }
 
                 startLesson();
@@ -1015,94 +1070,111 @@ function showSkillTree() {
 
         // MODIFY the startLesson function
         async function startLesson() {
-            console.log(`--- Starting Lesson: ${currentSkill.name} | Level ${currentLevel} | Session ${currentSession} ---`);
-            const dataLoaded = await loadLessonData(currentSkill, currentLevel, currentSession);
-            if (!dataLoaded) return;
+        console.log(`--- Starting Lesson: ${currentSkill.name} | Level ${currentLevel} | Session ${currentSession} ---`);
+        const dataLoaded = await loadLessonData(currentSkill, currentLevel, currentSession);
+        if (!dataLoaded) return;
 
-            // --- THIS IS THE KEY CHANGE ---
-            // Remove .slice() to use all challenges from the file
-            sessionChallenges = shuffle([...lessonData.challenges]); 
-            // --- END OF CHANGE ---
+        // Use the test challenges count if debug mode is enabled
+        const challengesToLoad = DEBUG_MODE_ENABLED ? DEV_TEST_CHALLENGES_PER_SESSION : lessonData.challenges.length;
+        sessionChallenges = shuffle([...lessonData.challenges]).slice(0, challengesToLoad);
 
-            if (sessionChallenges.length === 0) {
-                console.error("No challenges found in the lesson file.");
-                alert("Error: This lesson appears to be empty.");
-                showSkillTree();
-                return;
-            }
-
-            // Hide the level view and show the main app
-            document.getElementById('level-view-screen').classList.add('hidden');
-            mainApp.classList.remove('hidden');
-
-            wrongAnswerQueue = [];
-            isTypingRound = false;
-            isReviewing = false;
-            currentChallengeIndex = 0;
-            loadChallenge();
+        if (sessionChallenges.length === 0) {
+            console.error("No challenges found in the lesson file or filtered out by test settings.");
+            alert("Error: This lesson appears to be empty or test challenges count is too low.");
+            showSkillTree();
+            return;
         }
+
+        document.getElementById('level-view-screen').classList.add('hidden');
+        mainApp.classList.remove('hidden');
+
+        wrongAnswerQueue = [];
+        isTypingRound = false;
+        isReviewing = false;
+        currentChallengeIndex = 0;
+        loadChallenge();
+    }
+
         
         function loadChallenge() {
-            if (currentChallengeIndex >= sessionChallenges.length) {
-                if (!isTypingRound) {
-                    console.log("--- Starting Typing Round ---");
-                    isTypingRound = true;
-                    currentChallengeIndex = 0;
-                    challengeContainer.innerHTML = `<div class="text-center py-8"><h2 class="text-2xl font-bold">Great! Now for the typing round...</h2></div>`;
-                    setTimeout(loadChallenge, 1500); 
-                    return;
-                } else if (!isReviewing && wrongAnswerQueue.length > 0) {
-                    console.log("--- Starting Review Round for Incorrect Answers ---");
-                    isReviewing = true;
-                    sessionChallenges = shuffle([...wrongAnswerQueue]);
-                    wrongAnswerQueue = [];
-                    currentChallengeIndex = 0;
-                } else {
-                    endSession();
-                    return;
-                }
-            }
-
-            let challenge = sessionChallenges[currentChallengeIndex];
-            
-            // LOG: Log the entire challenge object being loaded
-            console.log(`Loading challenge ${currentChallengeIndex + 1}/${sessionChallenges.length}:`, challenge);
-
-            // FIX: Skip challenges that are missing a prompt or only contain punctuation
-            if (!challenge.prompt || challenge.prompt.replace(/[.,?!—\s]/g, '').length === 0) {
-                console.warn("Skipping challenge with empty or invalid prompt.", challenge);
-                currentChallengeIndex++;
-                loadChallenge();
+        if (currentChallengeIndex >= sessionChallenges.length) {
+            if (!isTypingRound) {
+                console.log("--- Starting Typing Round ---");
+                isTypingRound = true;
+                currentChallengeIndex = 0;
+                challengeContainer.innerHTML = `<div class="text-center py-8"><h2 class="text-2xl font-bold">Great! Now for the typing round...</h2></div>`;
+                setTimeout(loadChallenge, DEBUG_MODE_ENABLED ? DEV_QUICK_TRANSITION_MS : 1500);
                 return;
-            }
-            
-            updateProgressBar();
-            clearContainers();
-
-            let challengeType = getChallengeType(challenge);
-            
-            if (challengeType === 'unsupported') {
-                console.warn("Unsupported challenge type found, skipping:", challenge.type);
-                currentChallengeIndex++;
-                loadChallenge();
+            } else if (!isReviewing && wrongAnswerQueue.length > 0) {
+                console.log("--- Starting Review Round for Incorrect Answers ---");
+                isReviewing = true;
+                sessionChallenges = shuffle([...wrongAnswerQueue]);
+                wrongAnswerQueue = [];
+                currentChallengeIndex = 0;
+            } else {
+                endSession();
                 return;
-            }
-
-            switch (challengeType) {
-                case 'translate-en-ru-select':
-                case 'translate-ru-en-select':
-                case 'listen-ru-select':
-                    renderTranslateSelect(challenge);
-                    break;
-                case 'listen-ru-type':
-                    renderListenType(challenge);
-                    break;
-                case 'translate-en-ru-type':
-                case 'translate-ru-en-type':
-                    renderTranslateType(challenge);
-                    break;
             }
         }
+
+        let challenge = sessionChallenges[currentChallengeIndex];
+
+        console.log(`Loading challenge ${currentChallengeIndex + 1}/${sessionChallenges.length}:`, challenge);
+
+        if (!challenge.prompt || challenge.prompt.replace(/[.,?!—\s]/g, '').length === 0) {
+            console.warn("Skipping challenge with empty or invalid prompt.", challenge);
+            currentChallengeIndex++;
+            loadChallenge();
+            return;
+        }
+        
+        updateProgressBar();
+        clearContainers();
+
+        let challengeType = getChallengeType(challenge);
+
+        if (challengeType === 'unsupported') {
+            console.warn("Unsupported challenge type found, skipping:", challenge.type);
+            currentChallengeIndex++;
+            loadChallenge();
+            return;
+        }
+
+        switch (challengeType) {
+            case 'translate-en-ru-select':
+            case 'translate-ru-en-select':
+            case 'listen-ru-select':
+                renderTranslateSelect(challenge);
+                break;
+            case 'listen-ru-type':
+                renderListenType(challenge);
+                break;
+            case 'translate-en-ru-type':
+            case 'translate-ru-en-type':
+                renderTranslateType(challenge);
+                break;
+        }
+
+        // If auto-advance is enabled, automatically check/submit the answer
+        if (DEV_AUTO_ADVANCE) {
+            // Give a very short delay to allow DOM to render and attach listeners
+            setTimeout(() => {
+                const checkBtn = document.getElementById('check-btn');
+                if (checkBtn) {
+                    // For select type, automatically select all words (since it will be auto-correct)
+                    if (checkBtn.disabled && (challengeType === 'translate-en-ru-select' || challengeType === 'translate-ru-en-select' || challengeType === 'listen-ru-select')) {
+                        const optionsArea = document.getElementById('options-area');
+                        Array.from(optionsArea.children).forEach(btn => {
+                            if (!btn.classList.contains('hidden')) {
+                                btn.click(); // This will add to answerArea and enable checkBtn
+                            }
+                        });
+                    }
+                    checkBtn.click(); // Trigger the check
+                }
+            }, DEV_QUICK_TRANSITION_MS);
+        }
+    }
 
         function getChallengeType(challenge) {
             const isSelectionRound = !isTypingRound && !isReviewing;
@@ -1244,21 +1316,30 @@ function showSkillTree() {
             return JSON.parse(localStorage.getItem('russianAppProgress') || '{}');
         }
 
-        // REPLACE your old saveProgress function
-        function saveProgress(skillShortName, level, session, completedCount, totalCount) {
+        // REPLACE your old saveProgress function with this revised version
+        function saveProgress(skillShortName, level, session) { // Removed completedCount, totalCount as direct parameters
             const progress = getProgress();
             if (!progress[skillShortName]) {
                 progress[skillShortName] = { levels: {} };
             }
-            // Ensure the level object exists
             if (!progress[skillShortName].levels[level]) {
-                 progress[skillShortName].levels[level] = {};
+                // Initialize level progress if it doesn't exist
+                progress[skillShortName].levels[level] = { completedSessions: 0, totalSessions: 7 }; // Assuming 7 sessions per level
             }
-            progress[skillShortName].levels[level] = {
-                completed: completedCount,
-                total: totalCount,
-                session: session // <-- ADD THIS LINE
-            };
+        
+            // Increment completedSessions only if this session hasn't been recorded as completed yet
+            // This is important to prevent overcounting if a user replays a session
+            const levelProgress = progress[skillShortName].levels[level];
+            if (levelProgress.completedSessions < session) { // Only increment if completing a new session number
+                levelProgress.completedSessions = session; // Store the highest session completed for this level
+            }
+            
+            // Update the 'total' and 'completed' values for the pie chart calculation
+            // These will now reflect sessions, not challenges
+            levelProgress.completed = levelProgress.completedSessions;
+            levelProgress.total = levelProgress.totalSessions;
+            levelProgress.session = session; // Keep track of the last session played
+        
             localStorage.setItem('russianAppProgress', JSON.stringify(progress));
             console.log('Progress saved:', progress);
         }
@@ -1351,86 +1432,102 @@ function showSkillTree() {
         }
         
         function checkSelectedAnswer() {
-            const challenge = sessionChallenges[currentChallengeIndex];
-            const userAnswer = currentAnswer.join(' ');
-            let isCorrect = false;
-            
-            // FIX: Regex now includes em dash '—'
-            const clean = (str) => str.replace(/[.,?!—]/g, '');
+        const challenge = sessionChallenges[currentChallengeIndex];
+        const userAnswer = currentAnswer.join(' ');
+        let isCorrect = false;
 
-            if (challenge.correctSolutions && Array.isArray(challenge.correctSolutions)) {
-                isCorrect = challenge.correctSolutions.some(sol => clean(sol) === clean(userAnswer));
-            } else if (challenge.solutionTranslation) {
-                isCorrect = clean(challenge.solutionTranslation) === clean(userAnswer);
-            }
-            // LOG: Log answer check
-            console.log("Checking selected answer:", { userAnswer, correctSolutions: challenge.correctSolutions, isCorrect });
-            showFeedback(isCorrect);
+        const clean = (str) => str.replace(/[.,?!—]/g, '');
+
+        if (DEV_AUTO_ANSWER_CORRECTLY) {
+            isCorrect = true; // Force correct answer in debug mode
+            console.log("DEBUG: Auto-correcting selected answer.");
+        } else if (challenge.correctSolutions && Array.isArray(challenge.correctSolutions)) {
+            isCorrect = challenge.correctSolutions.some(sol => clean(sol) === clean(userAnswer));
+        } else if (challenge.solutionTranslation) {
+            isCorrect = clean(challenge.solutionTranslation) === clean(userAnswer);
         }
 
-        function checkTypedAnswer() {
-            const challenge = sessionChallenges[currentChallengeIndex];
-            const userAnswer = document.getElementById('typing-answer').value.trim().toLowerCase();
-            let isCorrect = false;
+        console.log("Checking selected answer:", { userAnswer, correctSolutions: challenge.correctSolutions, isCorrect });
+        showFeedback(isCorrect);
+    }
 
-            // FIX: Regex now includes em dash '—'
-            const clean = (str) => str.replace(/[.,?!—]/g, '').toLowerCase();
-            const userAnswerClean = clean(userAnswer);
+    // --- MODIFY `checkTypedAnswer` to allow auto-correct ---
+    function checkTypedAnswer() {
+        const challenge = sessionChallenges[currentChallengeIndex];
+        const userAnswer = document.getElementById('typing-answer').value.trim().toLowerCase();
+        let isCorrect = false;
 
-            if (challenge.correctSolutions && Array.isArray(challenge.correctSolutions)) {
-                isCorrect = challenge.correctSolutions.some(sol => clean(sol) === userAnswerClean);
-            } else if (challenge.solutionTranslation) {
-                isCorrect = clean(challenge.solutionTranslation) === userAnswerClean;
-            }
+        const clean = (str) => str.replace(/[.,?!—]/g, '').toLowerCase();
+        const userAnswerClean = clean(userAnswer);
 
-            // LOG: Log answer check
-            console.log("Checking typed answer:", { userAnswer, userAnswerClean, correctSolutions: challenge.correctSolutions, isCorrect });
-            showFeedback(isCorrect);
+        if (DEV_AUTO_ANSWER_CORRECTLY) {
+            isCorrect = true; // Force correct answer in debug mode
+            console.log("DEBUG: Auto-correcting typed answer.");
+            // If auto-correcting, optionally fill in the correct answer for visual feedback
+            document.getElementById('typing-answer').value = challenge.correctSolutions ? challenge.correctSolutions[0] : (challenge.solutionTranslation || '');
+        } else if (challenge.correctSolutions && Array.isArray(challenge.correctSolutions)) {
+            isCorrect = challenge.correctSolutions.some(sol => clean(sol) === userAnswerClean);
+        } else if (challenge.solutionTranslation) {
+            isCorrect = clean(challenge.solutionTranslation) === userAnswerClean;
         }
 
-        function showFeedback(isCorrect) {
-            console.log(`Feedback: Answer was ${isCorrect ? 'Correct' : 'Incorrect'}.`);
-            const challenge = sessionChallenges[currentChallengeIndex];
-            if (!isCorrect) {
-                 if (!wrongAnswerQueue.find(c => c.id === challenge.id)) {
-                    wrongAnswerQueue.push(challenge);
-                }
-            } else if (isReviewing) {
-                const originalIndex = sessionChallenges.findIndex(c => c.id === challenge.id);
-                if(originalIndex > -1) sessionChallenges.splice(originalIndex, 1);
-                currentChallengeIndex--;
-            }
+        console.log("Checking typed answer:", { userAnswer, userAnswerClean, correctSolutions: challenge.correctSolutions, isCorrect });
+        showFeedback(isCorrect);
+    }
 
-            const correctSolution = challenge.correctSolutions ? challenge.correctSolutions[0] : (challenge.solutionTranslation || '');
-            
-            let feedbackHTML = '';
-            if (isCorrect) {
-                feedbackHTML = `
-                    <div class="feedback bg-green-100 border-t-8 border-green-400 text-green-800 p-6 rounded-b-2xl">
-                        <p class="font-extrabold text-2xl">Correct!</p>
-                    </div>
-                `;
-            } else {
-                feedbackHTML = `
-                    <div class="feedback bg-red-100 border-t-8 border-red-400 text-red-800 p-6 rounded-b-2xl">
-                        <p class="font-extrabold text-2xl">Incorrect</p>
-                        <p class="mt-2 text-lg">Correct solution: <span class="font-bold">${correctSolution}</span></p>
-                    </div>
-                `;
+    // --- MODIFY `showFeedback` to auto-advance ---
+    function showFeedback(isCorrect) {
+        console.log(`Feedback: Answer was ${isCorrect ? 'Correct' : 'Incorrect'}.`);
+        const challenge = sessionChallenges[currentChallengeIndex];
+        if (!isCorrect) {
+            if (!wrongAnswerQueue.find(c => c.id === challenge.id)) {
+                wrongAnswerQueue.push(challenge);
             }
+        } else if (isReviewing) {
+            const originalIndex = sessionChallenges.findIndex(c => c.id === challenge.id);
+            if(originalIndex > -1) sessionChallenges.splice(originalIndex, 1);
+            currentChallengeIndex--; // Decrement to re-evaluate next challenge from reduced queue
+        }
 
-            userInputArea.querySelector('#check-btn').classList.add('hidden');
-            
-            const continueBtn = document.createElement('button');
-            continueBtn.textContent = 'Continue';
-            continueBtn.className = `w-full mt-4 ${isCorrect ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white font-bold py-3 px-4 rounded-2xl text-lg shadow-md`;
+        const correctSolution = challenge.correctSolutions ? challenge.correctSolutions[0] : (challenge.solutionTranslation || '');
+        
+        let feedbackHTML = '';
+        if (isCorrect) {
+            feedbackHTML = `
+                <div class="feedback bg-green-100 border-t-8 border-green-400 text-green-800 p-6 rounded-b-2xl">
+                    <p class="font-extrabold text-2xl">Correct!</p>
+                </div>
+            `;
+        } else {
+            feedbackHTML = `
+                <div class="feedback bg-red-100 border-t-8 border-red-400 text-red-800 p-6 rounded-b-2xl">
+                    <p class="font-extrabold text-2xl">Incorrect</p>
+                    <p class="mt-2 text-lg">Correct solution: <span class="font-bold">${correctSolution}</span></p>
+                </div>
+            `;
+        }
+
+        userInputArea.querySelector('#check-btn').classList.add('hidden');
+        
+        const continueBtn = document.createElement('button');
+        continueBtn.textContent = 'Continue';
+        continueBtn.className = `w-full mt-4 ${isCorrect ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white font-bold py-3 px-4 rounded-2xl text-lg shadow-md`;
+        
+        feedbackContainer.innerHTML = feedbackHTML;
+        feedbackContainer.appendChild(continueBtn);
+
+        // Auto-click continue button if auto-advance is enabled
+        if (DEV_AUTO_ADVANCE) {
+            setTimeout(() => {
+                continueBtn.click();
+            }, DEV_QUICK_TRANSITION_MS);
+        } else {
             continueBtn.onclick = () => {
                 currentChallengeIndex++;
                 loadChallenge();
             };
-            feedbackContainer.innerHTML = feedbackHTML;
-            feedbackContainer.appendChild(continueBtn);
         }
+    }
         
         function updateProgressBar() {
              const totalTasks = sessionChallenges.length * (isReviewing ? 1 : 2);
@@ -1448,13 +1545,12 @@ function showSkillTree() {
             currentAnswer = [];
         }
 
-        // MODIFY the endSession function
+        // MODIFY your existing endSession function
         function endSession() {
             console.log("--- Session Ended ---");
             
-            const totalChallengesInSession = sessionChallenges.length;
-            // Save progress: mark all challenges in this level as completed.
-            saveProgress(currentSkill.shortName, currentLevel, currentSession, totalChallengesInSession, totalChallengesInSession);
+            // No need to pass totalChallengesInSession, as saveProgress now tracks sessions
+            saveProgress(currentSkill.shortName, currentLevel, currentSession);
             
             progressBar.style.width = '100%';
             clearContainers();
@@ -1469,7 +1565,6 @@ function showSkillTree() {
                 </div>
             `;
             
-            // This button takes the user back to the level view for the current skill
             document.getElementById('back-to-levels-after-lesson-btn').onclick = () => {
                 mainApp.classList.add('hidden');
                 showLevelView(currentSkill); // Go back to the level view for the skill you just played
