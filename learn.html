@@ -930,7 +930,20 @@ function renderLevelView(skill) {
         if (isUnlocked) {
             levelElement.onclick = () => {
                 currentLevel = i;
-                currentSession = 1; // Assuming one session per level for now
+                
+                // Determine the next session to play
+                const levelProgress = skillProgress?.levels?.[i];
+                const lastCompletedSession = levelProgress?.session || 0;
+                
+                // Assuming 7 sessions per level
+                if (lastCompletedSession >= 7) {
+                    // If all sessions are done, let them review session 1
+                    currentSession = 1; 
+                } else {
+                    // Otherwise, play the next session
+                    currentSession = lastCompletedSession + 1;
+                }
+
                 startLesson();
             };
         }
@@ -1232,14 +1245,19 @@ function showSkillTree() {
         }
 
         // REPLACE your old saveProgress function
-        function saveProgress(skillShortName, level, completedCount, totalCount) {
+        function saveProgress(skillShortName, level, session, completedCount, totalCount) {
             const progress = getProgress();
             if (!progress[skillShortName]) {
                 progress[skillShortName] = { levels: {} };
             }
+            // Ensure the level object exists
+            if (!progress[skillShortName].levels[level]) {
+                 progress[skillShortName].levels[level] = {};
+            }
             progress[skillShortName].levels[level] = {
                 completed: completedCount,
-                total: totalCount
+                total: totalCount,
+                session: session // <-- ADD THIS LINE
             };
             localStorage.setItem('russianAppProgress', JSON.stringify(progress));
             console.log('Progress saved:', progress);
@@ -1436,8 +1454,8 @@ function showSkillTree() {
             
             const totalChallengesInSession = sessionChallenges.length;
             // Save progress: mark all challenges in this level as completed.
-            saveProgress(currentSkill.shortName, currentLevel, totalChallengesInSession, totalChallengesInSession);
-
+            saveProgress(currentSkill.shortName, currentLevel, currentSession, totalChallengesInSession, totalChallengesInSession);
+            
             progressBar.style.width = '100%';
             clearContainers();
             
